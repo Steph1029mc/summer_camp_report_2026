@@ -9,8 +9,8 @@
     --ink: #1f2a24;
     --paper: #faf8f4;
     --line: #ddd6c8;
-    --accent: #2f5d4f;
-    --accent-soft: #e7efe9;
+    --accent: #7030a0;
+    --accent-soft: #f1e6f7;
     --warn: #b5481f;
     --warn-soft: #fbe9e1;
     --muted: #756f62;
@@ -213,8 +213,20 @@
   }
   .conditional.show { display: block; }
 
+  .encourage-note {
+    margin: 18px 20px 0;
+    padding: 12px 14px;
+    background: var(--accent-soft);
+    border: 1px dashed var(--accent);
+    border-radius: 10px;
+    font-size: 13px;
+    color: var(--accent);
+    line-height: 1.6;
+    text-align: center;
+  }
+
   .submit-bar {
-    padding: 18px 20px 0;
+    padding: 14px 20px 0;
   }
 
   .btn-submit {
@@ -266,6 +278,36 @@
     color: var(--accent);
     cursor: pointer;
   }
+
+  .loading-screen {
+    text-align: center;
+    padding: 90px 24px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .loading-screen .spinner {
+    width: 28px; height: 28px;
+    border: 3px solid var(--accent-soft);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    margin: 0 auto 16px;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-screen .retry-btn {
+    margin-top: 16px;
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 1px solid var(--accent);
+    background: #fff;
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    display: none;
+  }
+  .loading-screen.error .retry-btn { display: inline-block; }
+  .loading-screen.error .spinner { display: none; }
 </style>
 </head>
 <body>
@@ -276,8 +318,17 @@
     <h1>每日工作反馈</h1>
   </div>
 
+  <!-- ============ LOADING SCREEN ============ -->
+  <div class="screen active" id="screenLoading">
+    <div class="loading-screen" id="loadingBox">
+      <div class="spinner"></div>
+      <div id="loadingText">正在加载团组信息...</div>
+      <button class="retry-btn" id="retryLoadBtn">重新加载</button>
+    </div>
+  </div>
+
   <!-- ============ FORM SCREEN ============ -->
-  <div class="screen active" id="screenForm">
+  <div class="screen" id="screenForm">
 
     <div class="card">
       <h2>基础信息</h2>
@@ -332,6 +383,13 @@
           <textarea id="hotelNote" placeholder="简述未完成原因..."></textarea>
         </div>
       </div>
+      <div class="field">
+        <label>明日行程是否已通知？</label>
+        <div class="seg" data-key="notified">
+          <button data-val="yes">是</button>
+          <button data-val="no">否</button>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -378,6 +436,8 @@
       </div>
     </div>
 
+    <div class="encourage-note">🌙 今天也辛苦啦，孩子们能平安玩到现在，多亏了你！填完这条就可以歇歇啦～</div>
+
     <div class="submit-bar">
       <button class="btn-submit" id="submitBtn">提交今日日志</button>
       <div class="status-msg" id="statusMsg"></div>
@@ -388,8 +448,8 @@
   <div class="screen" id="screenSuccess">
     <div class="success-screen">
       <div class="check">✓</div>
-      <h2>提交成功</h2>
-      <p>今日日志已记录，辛苦了。</p>
+      <h2>提交成功啦！</h2>
+      <p>辛苦一整天的你，值得被表扬 🌟<br>快去休息吧，明天又是元气满满的一天！</p>
       <button class="btn-secondary" id="backToFormBtn">填写新的一条</button>
     </div>
   </div>
@@ -404,15 +464,15 @@
   // Paste your deployed Google Apps Script Web App URL here (see deployment steps).
   var SHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzEn142tN_nv3ETlRUe0xQjYLCG9MZFaT9HOHcyKKkt4QiN25c98QCuvjxiAPCeTBnIDA/exec";
 
-  var GROUPS = [
-    { id: "B3-1 HX", label: "B3-1 HX · 金陵河西", expected: 16, staff: ["林菁","周梦蝶","赵睿成","沈英子"] },
-    { id: "B3-2 XZ", label: "B3-2 XZ · 徐州", expected: 21, staff: ["林菁","叶若晨","赵睿成","Jerry"] },
-    { id: "B3-3 SZ", label: "B3-3 SZ · 苏州园区", expected: 33, staff: ["单良","卢思远"] },
-    { id: "B3-4 CS1", label: "B3-4 CS1 · 常熟市实验中学1", expected: 36, staff: ["Jadon","帅桐"] },
-    { id: "B3-5 CS2", label: "B3-5 CS2 · 常熟实验+苏州高新区+太仓实验+高新区一中", expected: 40, staff: ["Aoife","雷蕾"] },
-    { id: "B3-6 YZ", label: "B3-6 YZ · 扬州", expected: 41, staff: ["林菁","叶若晨","赵睿成","沈英子"] },
-    { id: "B3-7 CS3", label: "B3-7 CS3 · 常熟昆承+常熟中学+启文+外国语", expected: 18, staff: ["林菁","Jerry","沈英子","待定"] },
-    { id: "B4-1", label: "B4-1", expected: 19, staff: ["林菁","待定"] }
+  // GROUPS and MEALS are no longer hard-coded here. They are fetched
+  // live from the "团组配置" and "用餐地点配置" tabs in Google Sheets
+  // each time the form loads (see loadConfig() below). To add/remove
+  // a counselor, a whole group, or a restaurant, edit those Sheet tabs
+  // directly - no code changes or redeployment needed.
+  var GROUPS = [];
+  var MEALS = [
+    { key: 'lunch', label: '午餐', locations: [] },
+    { key: 'dinner', label: '晚餐', locations: [] }
   ];
 
   // ===================== STATE =====================
@@ -425,11 +485,13 @@
   }
 
   // ===================== SCREENS =====================
+  var screenLoading = document.getElementById('screenLoading');
   var screenForm = document.getElementById('screenForm');
   var screenSuccess = document.getElementById('screenSuccess');
 
   function showScreen(name){
-    [screenForm, screenSuccess].forEach(function(s){ s.classList.remove('active'); });
+    [screenLoading, screenForm, screenSuccess].forEach(function(s){ s.classList.remove('active'); });
+    if(name === 'loading'){ screenLoading.classList.add('active'); }
     if(name === 'form'){ screenForm.classList.add('active'); }
     if(name === 'success'){ screenSuccess.classList.add('active'); }
   }
@@ -444,12 +506,15 @@
   var nameSelect = document.getElementById('nameSelect');
   var dateInput = document.getElementById('dateInput');
 
-  GROUPS.forEach(function(g){
-    var opt = document.createElement('option');
-    opt.value = g.id;
-    opt.textContent = g.label;
-    groupSelect.appendChild(opt);
-  });
+  function populateGroups(){
+    groupSelect.innerHTML = '';
+    GROUPS.forEach(function(g){
+      var opt = document.createElement('option');
+      opt.value = g.id;
+      opt.textContent = g.label;
+      groupSelect.appendChild(opt);
+    });
+  }
 
   function populateNames(){
     var g = GROUPS.find(function(x){ return x.id === groupSelect.value; });
@@ -465,51 +530,15 @@
     populateNames();
     renderMeals();
   });
-  populateNames();
-  dateInput.value = todayStr();
+
+  function initFormUI(){
+    populateGroups();
+    populateNames();
+    dateInput.value = todayStr();
+    renderMeals();
+  }
 
   // ===================== MEAL BLOCKS =====================
-  var MEALS = [
-    {
-      key: 'lunch',
-      label: '午餐',
-      locations: [
-        "Manchester | 学校营地用餐",
-        "Cambridge | Nines Global",
-        "Cambridge | Chinese Cantee(中餐厅)",
-        "Manchester | Dominos",
-        "Manchester | Fish Hut",
-        "Stredfor-upon-Avon | 中华楼(Must Go Chinagarden)",
-        "London | 临江宴",
-        "London | 扬子",
-        "Manchester | 椒香馆",
-        "Manchester | 红辣椒",
-        "London | Penderel's Oak",
-        "Manchester | Jodrell Bank",
-        "Manchester | Trafford Centre"
-      ]
-    },
-    {
-      key: 'dinner',
-      label: '晚餐',
-      locations: [
-        "London | Magic Wok",
-        "Manchester | 红辣椒 (红辣椒 Sale)",
-        "Manchester | 川韵轩",
-        "Manchester | 椒香馆",
-        "Manchester | Cosmo",
-        "Manchester | Babylon",
-        "Manchester | Sunday Roast",
-        "Manchester | Duke of Willington",
-        "London | Penderel's Oak",
-        "Manchester | Dominos",
-        "London | 临江宴",
-        "Manchester | 川府家宴",
-        "Oxford | 福满楼",
-        "Manchester | Trafford Centre"
-      ]
-    }
-  ];
   var mealBlocksEl = document.getElementById('mealBlocks');
 
   function renderMeals(){
@@ -572,7 +601,6 @@
       });
     });
   }
-  renderMeals();
 
 
   // ===================== SEGMENTED YES/NO =====================
@@ -630,7 +658,7 @@
     var g = GROUPS.find(function(x){ return x.id === groupSelect.value; });
     if(!g){ showStatus('请选择团组', true); return; }
     if(!nameSelect.value){ showStatus('请选择填报人', true); return; }
-    if(!segState.rollcall || !segState.itinerary || !segState.hotel || !segState.incident){
+    if(!segState.rollcall || !segState.itinerary || !segState.hotel || !segState.notified || !segState.incident){
       showStatus('请完成所有是/否选项', true); return;
     }
 
@@ -699,6 +727,7 @@
       itineraryNote: segState.itinerary === 'no' ? document.getElementById('itineraryNote').value.trim() : '',
       hotel: segState.hotel === 'yes' ? '是' : '否',
       hotelNote: segState.hotel === 'no' ? document.getElementById('hotelNote').value.trim() : '',
+      notified: segState.notified === 'yes' ? '是' : '否',
       incident: segState.incident === 'yes' ? '是' : '否',
       incidentType: segState.incident === 'yes' ? document.getElementById('incidentType').value : '',
       incidentNote: segState.incident === 'yes' ? document.getElementById('incidentNote').value.trim() : '',
@@ -765,6 +794,60 @@
     document.getElementById('summaryNote').value = '';
     statusMsg.textContent = '';
   }
+
+  // ===================== LOAD CONFIG FROM GOOGLE SHEETS =====================
+  // Fetches the current 团组配置 (groups/counselors) and 用餐地点配置
+  // (meal locations) directly from the Google Sheet each time the
+  // form is opened, so edits made in Sheets show up immediately
+  // without needing to touch this file or redeploy anything.
+
+  var loadingBox = document.getElementById('loadingBox');
+  var loadingText = document.getElementById('loadingText');
+  var retryLoadBtn = document.getElementById('retryLoadBtn');
+
+  async function loadConfig(){
+    loadingBox.classList.remove('error');
+    loadingText.textContent = '正在加载团组信息...';
+
+    if(!SHEET_WEBAPP_URL || SHEET_WEBAPP_URL.indexOf('PASTE_YOUR') === 0){
+      loadingText.textContent = '尚未配置 Google Sheets 地址，请联系管理员';
+      loadingBox.classList.add('error');
+      return;
+    }
+
+    try {
+      var res = await fetch(SHEET_WEBAPP_URL + '?action=config');
+      var data = await res.json();
+
+      if(!res.ok || !data || data.result !== 'success'){
+        throw new Error((data && data.message) || '加载失败');
+      }
+
+      GROUPS = Array.isArray(data.groups) ? data.groups : [];
+      MEALS[0].locations = (data.meals && Array.isArray(data.meals.lunch)) ? data.meals.lunch : [];
+      MEALS[1].locations = (data.meals && Array.isArray(data.meals.dinner)) ? data.meals.dinner : [];
+
+      if(GROUPS.length === 0){
+        loadingText.textContent = '团组配置为空，请检查 Google Sheet';
+        loadingBox.classList.add('error');
+        return;
+      }
+
+      initFormUI();
+      showScreen('form');
+
+    } catch(err){
+      console.error(err);
+      loadingText.textContent = '加载团组信息失败，请检查网络后重试';
+      loadingBox.classList.add('error');
+    }
+  }
+
+  retryLoadBtn.addEventListener('click', function(){
+    loadConfig();
+  });
+
+  loadConfig();
 
 })();
 </script>
