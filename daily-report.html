@@ -396,6 +396,7 @@
       <h2>异常情况</h2>
       <div class="field">
         <label>今天是否发生需要记录的异常情况？</label>
+        <div class="hint" style="margin-top:-2px; margin-bottom:8px;">例如：学生迟到、物品遗失、餐食不足等</div>
         <div class="seg" data-key="incident">
           <button data-val="yes">是</button>
           <button data-val="no">否</button>
@@ -431,6 +432,7 @@
 
     <div class="card">
       <h2>今日总结</h2>
+      <div class="hint" style="margin-bottom:8px;">包括但不限交通 / 餐食 / 酒店 / 入校 / 营地课程 / 景点 / 研学任务及手册等</div>
       <div class="field">
         <textarea id="summaryNote" placeholder="例如：行程顺利，无异常 / 简述今日情况..."></textarea>
       </div>
@@ -816,11 +818,19 @@
     }
 
     try {
-      var res = await fetch(SHEET_WEBAPP_URL + '?action=config');
+      var res = await fetch(SHEET_WEBAPP_URL + '?action=config', {
+        method: 'GET',
+        redirect: 'follow'
+      });
+
+      if(!res.ok){
+        throw new Error('HTTP ' + res.status);
+      }
+
       var data = await res.json();
 
-      if(!res.ok || !data || data.result !== 'success'){
-        throw new Error((data && data.message) || '加载失败');
+      if(!data || data.result !== 'success'){
+        throw new Error((data && data.message) || '后端返回格式异常');
       }
 
       GROUPS = Array.isArray(data.groups) ? data.groups : [];
@@ -837,8 +847,8 @@
       showScreen('form');
 
     } catch(err){
-      console.error(err);
-      loadingText.textContent = '加载团组信息失败，请检查网络后重试';
+      console.error('loadConfig error:', err);
+      loadingText.textContent = '加载团组信息失败：' + (err && err.message ? err.message : '请检查网络后重试');
       loadingBox.classList.add('error');
     }
   }
