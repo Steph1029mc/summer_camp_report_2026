@@ -1,0 +1,663 @@
+<style>
+  :root {
+    --ink: #1f2a24;
+    --paper: #faf8f4;
+    --line: #ddd6c8;
+    --accent: #2f5d4f;
+    --accent-soft: #e7efe9;
+    --warn: #b5481f;
+    --warn-soft: #fbe9e1;
+    --muted: #756f62;
+    --radius: 10px;
+    font-family: -apple-system, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  .app {
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100%;
+    padding: 0 0 40px;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  .topbar {
+    padding: 22px 20px 16px;
+    border-bottom: 1px solid var(--line);
+    background: var(--paper);
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
+
+  .topbar .brand {
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .topbar h1 {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+
+  .screen { display: none; padding: 18px 20px 0; }
+  .screen.active { display: block; }
+
+  .card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 14px;
+  }
+
+  .card h2 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin: 0 0 14px;
+    font-weight: 700;
+  }
+
+  label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--ink);
+  }
+
+  .field { margin-bottom: 16px; }
+  .field:last-child { margin-bottom: 0; }
+
+  select, input[type=number], textarea, input[type=text] {
+    width: 100%;
+    padding: 11px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: #fff;
+    font-size: 16px;
+    color: var(--ink);
+    font-family: inherit;
+  }
+
+  select:focus, input:focus, textarea:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  textarea { resize: vertical; min-height: 70px; }
+
+  .hint { font-size: 12px; color: var(--muted); margin-top: 5px; }
+
+  .meal-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    align-items: end;
+  }
+
+  .meal-block {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+
+  .meal-block:last-child { margin-bottom: 0; }
+
+  .meal-name {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .meal-expected {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .meal-diff {
+    font-size: 12px;
+    margin-top: 6px;
+    font-weight: 600;
+  }
+  .meal-diff.ok { color: var(--accent); }
+  .meal-diff.short { color: var(--warn); }
+
+  .seg {
+    display: flex;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .seg button {
+    flex: 1;
+    padding: 10px 0;
+    border: none;
+    background: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button.on.yes { background: var(--accent-soft); color: var(--accent); }
+  .seg button.on.no { background: var(--warn-soft); color: var(--warn); }
+
+  .conditional {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--line);
+    display: none;
+  }
+  .conditional.show { display: block; }
+
+  .submit-bar {
+    padding: 18px 20px 0;
+  }
+
+  .btn-submit {
+    width: 100%;
+    padding: 15px 0;
+    border-radius: 10px;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .btn-submit:active { opacity: 0.85; }
+  .btn-submit:disabled { background: #b9c4bd; cursor: not-allowed; }
+
+  .status-msg {
+    text-align: center;
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 10px;
+    min-height: 18px;
+  }
+  .status-msg.success { color: var(--accent); font-weight: 600; }
+  .status-msg.error { color: var(--warn); font-weight: 600; }
+
+  .success-screen {
+    text-align: center;
+    padding: 60px 20px;
+  }
+  .success-screen .check {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 16px;
+    font-size: 28px;
+  }
+  .success-screen h2 { font-size: 18px; margin: 0 0 6px; }
+  .success-screen p { font-size: 14px; color: var(--muted); margin: 0 0 24px; }
+  .btn-secondary {
+    padding: 11px 22px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+    cursor: pointer;
+  }
+</style>
+
+<div class="app">
+  <div class="topbar">
+    <div class="brand">Suman Group · 2026 Summer Camp</div>
+    <h1>每日工作反馈</h1>
+  </div>
+
+  <!-- ============ FORM SCREEN ============ -->
+  <div class="screen active" id="screenForm">
+
+    <div class="card">
+      <h2>基础信息</h2>
+      <div class="field">
+        <label>团组 Group</label>
+        <select id="groupSelect"></select>
+      </div>
+      <div class="field">
+        <label>填报人</label>
+        <select id="nameSelect"></select>
+      </div>
+      <div class="field">
+        <label>日期</label>
+        <input type="text" id="dateInput" readonly />
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>用餐人数反馈</h2>
+      <div id="mealBlocks"></div>
+    </div>
+
+    <div class="card">
+      <h2>当日完成情况</h2>
+      <div class="field">
+        <label>点名 / 人数清点是否每次完成？</label>
+        <div class="seg" data-key="rollcall">
+          <button data-val="yes">是</button>
+          <button data-val="no">否</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>今日行程是否按计划完成？</label>
+        <div class="seg" data-key="itinerary">
+          <button data-val="yes">是</button>
+          <button data-val="no">否</button>
+        </div>
+        <div class="conditional" data-cond="itinerary">
+          <textarea id="itineraryNote" placeholder="简述未完成原因..."></textarea>
+        </div>
+      </div>
+      <div class="field">
+        <label>行程结束后将学生送回酒店，与酒店值班人员交接是否正常？</label>
+        <div class="seg" data-key="hotel">
+          <button data-val="yes">是</button>
+          <button data-val="no">否</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>异常情况</h2>
+      <div class="field">
+        <label>今天是否发生需要记录的异常情况？</label>
+        <div class="seg" data-key="incident">
+          <button data-val="yes">是</button>
+          <button data-val="no">否</button>
+        </div>
+      </div>
+      <div class="conditional" data-cond="incident">
+        <div class="field">
+          <label>异常类型</label>
+          <select id="incidentType">
+            <option value="">请选择...</option>
+            <option value="学生身体不适/受伤">学生身体不适 / 受伤</option>
+            <option value="学生走失">学生走失</option>
+            <option value="学生迟到">学生迟到</option>
+            <option value="物品遗失">物品遗失</option>
+            <option value="餐食不足">餐食不足</option>
+            <option value="天气调整">天气调整</option>
+            <option value="其他">其他</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>简要说明</label>
+          <textarea id="incidentNote" placeholder="涉及学生、处理过程..."></textarea>
+        </div>
+        <div class="field">
+          <label>是否已上报领队老师 / 苏曼工作人员？</label>
+          <div class="seg" data-key="reported">
+            <button data-val="yes">是</button>
+            <button data-val="no">否</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>今日总结</h2>
+      <div class="field">
+        <textarea id="summaryNote" placeholder="例如：行程顺利，无异常 / 简述今日情况..."></textarea>
+      </div>
+    </div>
+
+    <div class="submit-bar">
+      <button class="btn-submit" id="submitBtn">提交今日日志</button>
+      <div class="status-msg" id="statusMsg"></div>
+    </div>
+  </div>
+
+  <!-- ============ SUCCESS SCREEN ============ -->
+  <div class="screen" id="screenSuccess">
+    <div class="success-screen">
+      <div class="check">✓</div>
+      <h2>提交成功</h2>
+      <p>今日日志已记录，辛苦了。</p>
+      <button class="btn-secondary" id="backToFormBtn">填写新的一条</button>
+    </div>
+  </div>
+
+
+
+
+<script>
+(function(){
+
+  // ===================== CONFIG =====================
+  // Paste your deployed Google Apps Script Web App URL here (see deployment steps).
+  var SHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzEn142tN_nv3ETlRUe0xQjYLCG9MZFaT9HOHcyKKkt4QiN25c98QCuvjxiAPCeTBnIDA/exec";
+
+  var GROUPS = [
+    { id: "B3-1 HX", label: "B3-1 HX · 金陵河西", expected: 16, staff: ["林菁","周梦蝶","赵睿成","沈英子"] },
+    { id: "B3-2 XZ", label: "B3-2 XZ · 徐州", expected: 21, staff: ["林菁","叶若晨","赵睿成","Jerry"] },
+    { id: "B3-3 SZ", label: "B3-3 SZ · 苏州园区", expected: 33, staff: ["单良","卢思远"] },
+    { id: "B3-4 CS1", label: "B3-4 CS1 · 常熟市实验中学1", expected: 36, staff: ["Jadon","帅桐"] },
+    { id: "B3-5 CS2", label: "B3-5 CS2 · 常熟实验+苏州高新区+太仓实验+高新区一中", expected: 40, staff: ["Aoife","雷蕾"] },
+    { id: "B3-6 YZ", label: "B3-6 YZ · 扬州", expected: 41, staff: ["林菁","叶若晨","赵睿成","沈英子"] },
+    { id: "B3-7 CS3", label: "B3-7 CS3 · 常熟昆承+常熟中学+启文+外国语", expected: 18, staff: ["林菁","Jerry","沈英子","待定"] },
+    { id: "B4-1", label: "B4-1", expected: 19, staff: ["林菁","待定"] }
+  ];
+
+  // ===================== STATE =====================
+  var segState = {};
+
+  function todayStr(){
+    var d = new Date();
+    var y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+    return y + "-" + m + "-" + day;
+  }
+
+  // ===================== SCREENS =====================
+  var screenForm = document.getElementById('screenForm');
+  var screenSuccess = document.getElementById('screenSuccess');
+
+  function showScreen(name){
+    [screenForm, screenSuccess].forEach(function(s){ s.classList.remove('active'); });
+    if(name === 'form'){ screenForm.classList.add('active'); }
+    if(name === 'success'){ screenSuccess.classList.add('active'); }
+  }
+
+  document.getElementById('backToFormBtn').addEventListener('click', function(){
+    resetForm();
+    showScreen('form');
+  });
+
+  // ===================== POPULATE GROUP / NAME =====================
+  var groupSelect = document.getElementById('groupSelect');
+  var nameSelect = document.getElementById('nameSelect');
+  var dateInput = document.getElementById('dateInput');
+
+  GROUPS.forEach(function(g){
+    var opt = document.createElement('option');
+    opt.value = g.id;
+    opt.textContent = g.label;
+    groupSelect.appendChild(opt);
+  });
+
+  function populateNames(){
+    var g = GROUPS.find(function(x){ return x.id === groupSelect.value; });
+    nameSelect.innerHTML = '';
+    if(!g) return;
+    g.staff.forEach(function(n){
+      var opt = document.createElement('option');
+      opt.value = n; opt.textContent = n;
+      nameSelect.appendChild(opt);
+    });
+  }
+  groupSelect.addEventListener('change', function(){
+    populateNames();
+    renderMeals();
+  });
+  populateNames();
+  dateInput.value = todayStr();
+
+  // ===================== MEAL BLOCKS =====================
+  var MEALS = [
+    {
+      key: 'lunch',
+      label: '午餐',
+      locations: [
+        "Manchester | 学校营地用餐",
+        "Cambridge | Nines Global",
+        "Cambridge | Chinese Cantee(中餐厅)",
+        "Manchester | Dominos",
+        "Manchester | Fish Hut",
+        "Stredfor-upon-Avon | 中华楼(Must Go Chinagarden)",
+        "London | 临江宴",
+        "London | 扬子",
+        "Manchester | 椒香馆",
+        "Manchester | 红辣椒",
+        "London | Penderel's Oak",
+        "Manchester | Jodrell Bank",
+        "Manchester | Trafford Centre"
+      ]
+    },
+    {
+      key: 'dinner',
+      label: '晚餐',
+      locations: [
+        "London | Magic Wok",
+        "Manchester | 红辣椒 (红辣椒 Sale)",
+        "Manchester | 川韵轩",
+        "Manchester | 椒香馆",
+        "Manchester | Cosmo",
+        "Manchester | Babylon",
+        "Manchester | Sunday Roast",
+        "Manchester | Duke of Willington",
+        "London | Penderel's Oak",
+        "Manchester | Dominos",
+        "London | 临江宴",
+        "Manchester | 川府家宴",
+        "Oxford | 福满楼",
+        "Manchester | Trafford Centre"
+      ]
+    }
+  ];
+  var mealBlocksEl = document.getElementById('mealBlocks');
+
+  function renderMeals(){
+    var g = GROUPS.find(function(x){ return x.id === groupSelect.value; });
+    var expected = g ? g.expected : 0;
+    mealBlocksEl.innerHTML = '';
+    MEALS.forEach(function(m){
+      var div = document.createElement('div');
+      div.className = 'meal-block';
+      var locOptions = '<option value="">请选择用餐地点...</option>' +
+        m.locations.map(function(loc){
+          return '<option value="' + loc.replace(/"/g,'&quot;') + '">' + loc + '</option>';
+        }).join('');
+      div.innerHTML =
+        '<div class="meal-name"><span>' + m.label + '</span><span class="meal-expected">应到 ' + expected + ' 人</span></div>' +
+        '<div class="field" style="margin-bottom:10px;">' +
+        '<label style="font-size:13px;">用餐地点</label>' +
+        '<select id="loc_' + m.key + '">' + locOptions + '</select>' +
+        '</div>' +
+        '<div class="field" style="margin-bottom:0;">' +
+        '<label style="font-size:13px;">实际用餐人数（不含辅导员）</label>' +
+        '<input type="number" inputmode="numeric" min="0" max="' + (expected+20) + '" id="meal_' + m.key + '" placeholder="输入实际用餐人数" />' +
+        '</div>' +
+        '<div class="meal-diff" id="diff_' + m.key + '"></div>';
+      mealBlocksEl.appendChild(div);
+    });
+
+    MEALS.forEach(function(m){
+      var input = document.getElementById('meal_' + m.key);
+      input.addEventListener('input', function(){
+        var diffEl = document.getElementById('diff_' + m.key);
+        var val = parseInt(input.value, 10);
+        if(isNaN(val)){ diffEl.textContent = ''; return; }
+        var diff = expected - val;
+        if(diff <= 0){
+          diffEl.textContent = '✓ 人数齐';
+          diffEl.className = 'meal-diff ok';
+        } else {
+          diffEl.textContent = '缺 ' + diff + ' 人';
+          diffEl.className = 'meal-diff short';
+        }
+      });
+    });
+  }
+  renderMeals();
+
+
+  // ===================== SEGMENTED YES/NO =====================
+  document.querySelectorAll('.seg').forEach(function(seg){
+    var key = seg.getAttribute('data-key');
+    segState[key] = null;
+    seg.querySelectorAll('button').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        seg.querySelectorAll('button').forEach(function(b){ b.classList.remove('on','yes','no'); });
+        var val = btn.getAttribute('data-val');
+        btn.classList.add('on', val);
+        segState[key] = val;
+        updateConditionals();
+      });
+    });
+  });
+
+  function updateConditionals(){
+    document.querySelectorAll('.conditional').forEach(function(c){
+      var key = c.getAttribute('data-cond');
+      var shouldShow = false;
+      if(key === 'itinerary'){
+        shouldShow = segState[key] === 'no';
+      } else if(key === 'incident'){
+        shouldShow = segState[key] === 'yes';
+      }
+      if(shouldShow){
+        c.classList.add('show');
+      } else {
+        c.classList.remove('show');
+        if(key === 'itinerary'){
+          document.getElementById('itineraryNote').value = '';
+        } else if(key === 'incident'){
+          document.getElementById('incidentType').value = '';
+          document.getElementById('incidentNote').value = '';
+          segState.reported = null;
+          var repSeg = document.querySelector('.seg[data-key="reported"]');
+          if(repSeg) repSeg.querySelectorAll('button').forEach(function(b){ b.classList.remove('on','yes','no'); });
+        }
+      }
+    });
+  }
+
+  // ===================== SUBMIT =====================
+  var submitBtn = document.getElementById('submitBtn');
+  var statusMsg = document.getElementById('statusMsg');
+
+  submitBtn.addEventListener('click', async function(){
+    var g = GROUPS.find(function(x){ return x.id === groupSelect.value; });
+    if(!g){ showStatus('请选择团组', true); return; }
+    if(!nameSelect.value){ showStatus('请选择填报人', true); return; }
+    if(!segState.rollcall || !segState.itinerary || !segState.hotel || !segState.incident){
+      showStatus('请完成所有是/否选项', true); return;
+    }
+
+    var meals = {};
+    var hasShort = false;
+    var locations = {};
+    for(var i=0;i<MEALS.length;i++){
+      var m = MEALS[i];
+      var loc = document.getElementById('loc_' + m.key).value;
+      if(!loc){ showStatus('请选择' + m.label + '用餐地点', true); return; }
+      var v = document.getElementById('meal_' + m.key).value;
+      if(v === ''){ showStatus('请填写' + m.label + '实际用餐人数', true); return; }
+      meals[m.key] = parseInt(v,10);
+      locations[m.key] = loc;
+      if(meals[m.key] < g.expected) hasShort = true;
+    }
+
+    if(segState.incident === 'yes'){
+      var itype = document.getElementById('incidentType').value;
+      var inote = document.getElementById('incidentNote').value.trim();
+      if(!itype){ showStatus('请选择异常类型', true); return; }
+      if(!inote){ showStatus('请简要说明异常情况', true); return; }
+      if(!segState.reported){ showStatus('请确认是否已上报', true); return; }
+    }
+
+    var summary = document.getElementById('summaryNote').value.trim();
+    if(!summary){ showStatus('请填写今日总结', true); return; }
+
+    var record = {
+      group: g.id,
+      groupLabel: g.label,
+      expected: g.expected,
+      reporter: nameSelect.value,
+      date: dateInput.value,
+      lunch: meals.lunch,
+      lunchLocation: locations.lunch,
+      dinner: meals.dinner,
+      dinnerLocation: locations.dinner,
+      hasShort: hasShort ? '是' : '否',
+      rollcall: segState.rollcall === 'yes' ? '是' : '否',
+      itinerary: segState.itinerary === 'yes' ? '是' : '否',
+      itineraryNote: segState.itinerary === 'no' ? document.getElementById('itineraryNote').value.trim() : '',
+      hotel: segState.hotel === 'yes' ? '是' : '否',
+      incident: segState.incident === 'yes' ? '是' : '否',
+      incidentType: segState.incident === 'yes' ? document.getElementById('incidentType').value : '',
+      incidentNote: segState.incident === 'yes' ? document.getElementById('incidentNote').value.trim() : '',
+      reported: segState.incident === 'yes' ? (segState.reported === 'yes' ? '是' : '否') : '',
+      summary: summary,
+      submittedAt: new Date().toISOString()
+    };
+
+    if(!SHEET_WEBAPP_URL || SHEET_WEBAPP_URL.indexOf('PASTE_YOUR') === 0){
+      showStatus('尚未配置 Google Sheets 提交地址，请联系管理员', true);
+      return;
+    }
+
+    submitBtn.disabled = true;
+    showStatus('正在提交...', false);
+
+    try {
+      var res = await fetch(SHEET_WEBAPP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(record)
+      });
+
+      var data = null;
+      try { data = await res.json(); } catch(e){ data = null; }
+
+      if(res.ok && data && data.result === 'success'){
+        showStatus('提交成功', false, true);
+        submitBtn.disabled = false;
+        setTimeout(function(){
+          resetForm();
+          showScreen('success');
+        }, 300);
+      } else {
+        showStatus('提交失败，请重试（数据已保留）', true);
+        submitBtn.disabled = false;
+      }
+    } catch(err){
+      console.error(err);
+      showStatus('提交失败，请检查网络后重试（数据已保留）', true);
+      submitBtn.disabled = false;
+    }
+  });
+
+  function showStatus(text, isError, isSuccess){
+    statusMsg.textContent = text;
+    statusMsg.className = 'status-msg' + (isError ? ' error' : (isSuccess ? ' success' : ''));
+  }
+
+  function resetForm(){
+    groupSelect.selectedIndex = 0;
+    populateNames();
+    renderMeals();
+    dateInput.value = todayStr();
+    segState = {};
+    document.querySelectorAll('.seg button').forEach(function(b){ b.classList.remove('on','yes','no'); });
+    document.querySelectorAll('.seg').forEach(function(seg){ segState[seg.getAttribute('data-key')] = null; });
+    document.querySelectorAll('.conditional').forEach(function(c){ c.classList.remove('show'); });
+    document.getElementById('itineraryNote').value = '';
+    document.getElementById('incidentType').value = '';
+    document.getElementById('incidentNote').value = '';
+    document.getElementById('summaryNote').value = '';
+    statusMsg.textContent = '';
+  }
+
+})();
+</script>
