@@ -1,3 +1,9 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>苏曼夏令营 · 每日工作反馈</title>
 <style>
   :root {
     --ink: #1f2a24;
@@ -12,14 +18,22 @@
     font-family: -apple-system, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
   }
 
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #faf8f4;
+    width: 100%;
+  }
+
   * { box-sizing: border-box; }
 
   .app {
     background: var(--paper);
     color: var(--ink);
-    min-height: 100%;
+    min-height: 100vh;
     padding: 0 0 40px;
-    max-width: 480px;
+    width: 100%;
+    max-width: 560px;
     margin: 0 auto;
   }
 
@@ -49,6 +63,12 @@
 
   .screen { display: none; padding: 18px 20px 0; }
   .screen.active { display: block; }
+
+  @media (max-width: 380px) {
+    .topbar { padding: 18px 14px 14px; }
+    .screen { padding: 14px 14px 0; }
+    .card { padding: 14px; }
+  }
 
   .card {
     background: #fff;
@@ -117,25 +137,53 @@
   .meal-name {
     font-size: 14px;
     font-weight: 700;
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    margin-bottom: 10px;
   }
 
-  .meal-expected {
-    font-size: 12px;
-    color: var(--muted);
-    font-weight: 500;
+  .meal-count-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+  }
+
+  .meal-count-row .field { flex: 1; margin-bottom: 0; }
+
+  .meal-expected-badge {
+    flex-shrink: 0;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-radius: 8px;
+    padding: 9px 14px;
+    text-align: center;
+    line-height: 1.1;
+  }
+
+  .meal-expected-badge .num {
+    font-size: 20px;
+    font-weight: 800;
+    display: block;
+  }
+
+  .meal-expected-badge .lbl {
+    font-size: 10px;
+    font-weight: 600;
+    white-space: nowrap;
   }
 
   .meal-diff {
     font-size: 12px;
-    margin-top: 6px;
+    margin-top: 8px;
     font-weight: 600;
   }
   .meal-diff.ok { color: var(--accent); }
   .meal-diff.short { color: var(--warn); }
+  .meal-diff.over { color: var(--warn); }
+
+  .meal-overnote {
+    margin-top: 10px;
+    display: none;
+  }
+  .meal-overnote.show { display: block; }
 
   .seg {
     display: flex;
@@ -219,6 +267,8 @@
     cursor: pointer;
   }
 </style>
+</head>
+<body>
 
 <div class="app">
   <div class="topbar">
@@ -258,6 +308,9 @@
           <button data-val="yes">是</button>
           <button data-val="no">否</button>
         </div>
+        <div class="conditional" data-cond="rollcall">
+          <textarea id="rollcallNote" placeholder="简述尚未完成原因..."></textarea>
+        </div>
       </div>
       <div class="field">
         <label>今日行程是否按计划完成？</label>
@@ -274,6 +327,9 @@
         <div class="seg" data-key="hotel">
           <button data-val="yes">是</button>
           <button data-val="no">否</button>
+        </div>
+        <div class="conditional" data-cond="hotel">
+          <textarea id="hotelNote" placeholder="简述未完成原因..."></textarea>
         </div>
       </div>
     </div>
@@ -468,16 +524,23 @@
           return '<option value="' + loc.replace(/"/g,'&quot;') + '">' + loc + '</option>';
         }).join('');
       div.innerHTML =
-        '<div class="meal-name"><span>' + m.label + '</span><span class="meal-expected">应到 ' + expected + ' 人</span></div>' +
+        '<div class="meal-name">' + m.label + '</div>' +
         '<div class="field" style="margin-bottom:10px;">' +
         '<label style="font-size:13px;">用餐地点</label>' +
         '<select id="loc_' + m.key + '">' + locOptions + '</select>' +
         '</div>' +
-        '<div class="field" style="margin-bottom:0;">' +
+        '<div class="meal-count-row">' +
+        '<div class="field">' +
         '<label style="font-size:13px;">实际用餐人数（不含辅导员）</label>' +
-        '<input type="number" inputmode="numeric" min="0" max="' + (expected+20) + '" id="meal_' + m.key + '" placeholder="输入实际用餐人数" />' +
+        '<input type="number" inputmode="numeric" min="0" id="meal_' + m.key + '" placeholder="输入实际用餐人数" />' +
         '</div>' +
-        '<div class="meal-diff" id="diff_' + m.key + '"></div>';
+        '<div class="meal-expected-badge"><span class="num">' + expected + '</span><span class="lbl">应到人数</span></div>' +
+        '</div>' +
+        '<div class="meal-diff" id="diff_' + m.key + '"></div>' +
+        '<div class="field meal-overnote" id="overwrap_' + m.key + '">' +
+        '<label style="font-size:13px;">实际用餐人数超过应到人数，请说明原因</label>' +
+        '<textarea id="overnote_' + m.key + '" placeholder="例如：临时加了随团老师 / 借餐位给其他团组..."></textarea>' +
+        '</div>';
       mealBlocksEl.appendChild(div);
     });
 
@@ -485,15 +548,26 @@
       var input = document.getElementById('meal_' + m.key);
       input.addEventListener('input', function(){
         var diffEl = document.getElementById('diff_' + m.key);
+        var overWrap = document.getElementById('overwrap_' + m.key);
         var val = parseInt(input.value, 10);
-        if(isNaN(val)){ diffEl.textContent = ''; return; }
+        if(isNaN(val)){
+          diffEl.textContent = '';
+          overWrap.classList.remove('show');
+          return;
+        }
         var diff = expected - val;
-        if(diff <= 0){
+        if(diff === 0){
           diffEl.textContent = '✓ 人数齐';
           diffEl.className = 'meal-diff ok';
-        } else {
+          overWrap.classList.remove('show');
+        } else if(diff > 0){
           diffEl.textContent = '缺 ' + diff + ' 人';
           diffEl.className = 'meal-diff short';
+          overWrap.classList.remove('show');
+        } else {
+          diffEl.textContent = '超出应到人数 ' + (-diff) + ' 人，请说明原因';
+          diffEl.className = 'meal-diff over';
+          overWrap.classList.add('show');
         }
       });
     });
@@ -517,10 +591,16 @@
   });
 
   function updateConditionals(){
+    var noTriggerKeys = ['rollcall', 'itinerary', 'hotel'];
+    var noteFieldMap = {
+      rollcall: 'rollcallNote',
+      itinerary: 'itineraryNote',
+      hotel: 'hotelNote'
+    };
     document.querySelectorAll('.conditional').forEach(function(c){
       var key = c.getAttribute('data-cond');
       var shouldShow = false;
-      if(key === 'itinerary'){
+      if(noTriggerKeys.indexOf(key) !== -1){
         shouldShow = segState[key] === 'no';
       } else if(key === 'incident'){
         shouldShow = segState[key] === 'yes';
@@ -529,8 +609,8 @@
         c.classList.add('show');
       } else {
         c.classList.remove('show');
-        if(key === 'itinerary'){
-          document.getElementById('itineraryNote').value = '';
+        if(noteFieldMap[key]){
+          document.getElementById(noteFieldMap[key]).value = '';
         } else if(key === 'incident'){
           document.getElementById('incidentType').value = '';
           document.getElementById('incidentNote').value = '';
@@ -556,7 +636,9 @@
 
     var meals = {};
     var hasShort = false;
+    var hasOver = false;
     var locations = {};
+    var overNotes = {};
     for(var i=0;i<MEALS.length;i++){
       var m = MEALS[i];
       var loc = document.getElementById('loc_' + m.key).value;
@@ -566,6 +648,24 @@
       meals[m.key] = parseInt(v,10);
       locations[m.key] = loc;
       if(meals[m.key] < g.expected) hasShort = true;
+      if(meals[m.key] > g.expected){
+        hasOver = true;
+        var overNote = document.getElementById('overnote_' + m.key).value.trim();
+        if(!overNote){ showStatus('请说明' + m.label + '人数超出原因', true); return; }
+        overNotes[m.key] = overNote;
+      } else {
+        overNotes[m.key] = '';
+      }
+    }
+
+    if(segState.rollcall === 'no'){
+      var rollcallNote = document.getElementById('rollcallNote').value.trim();
+      if(!rollcallNote){ showStatus('请简述点名 / 人数清点尚未完成原因', true); return; }
+    }
+
+    if(segState.hotel === 'no'){
+      var hotelNote = document.getElementById('hotelNote').value.trim();
+      if(!hotelNote){ showStatus('请简述酒店交接异常原因', true); return; }
     }
 
     if(segState.incident === 'yes'){
@@ -587,13 +687,18 @@
       date: dateInput.value,
       lunch: meals.lunch,
       lunchLocation: locations.lunch,
+      lunchOverNote: overNotes.lunch,
       dinner: meals.dinner,
       dinnerLocation: locations.dinner,
+      dinnerOverNote: overNotes.dinner,
       hasShort: hasShort ? '是' : '否',
+      hasOver: hasOver ? '是' : '否',
       rollcall: segState.rollcall === 'yes' ? '是' : '否',
+      rollcallNote: segState.rollcall === 'no' ? document.getElementById('rollcallNote').value.trim() : '',
       itinerary: segState.itinerary === 'yes' ? '是' : '否',
       itineraryNote: segState.itinerary === 'no' ? document.getElementById('itineraryNote').value.trim() : '',
       hotel: segState.hotel === 'yes' ? '是' : '否',
+      hotelNote: segState.hotel === 'no' ? document.getElementById('hotelNote').value.trim() : '',
       incident: segState.incident === 'yes' ? '是' : '否',
       incidentType: segState.incident === 'yes' ? document.getElementById('incidentType').value : '',
       incidentNote: segState.incident === 'yes' ? document.getElementById('incidentNote').value.trim() : '',
@@ -652,7 +757,9 @@
     document.querySelectorAll('.seg button').forEach(function(b){ b.classList.remove('on','yes','no'); });
     document.querySelectorAll('.seg').forEach(function(seg){ segState[seg.getAttribute('data-key')] = null; });
     document.querySelectorAll('.conditional').forEach(function(c){ c.classList.remove('show'); });
+    document.getElementById('rollcallNote').value = '';
     document.getElementById('itineraryNote').value = '';
+    document.getElementById('hotelNote').value = '';
     document.getElementById('incidentType').value = '';
     document.getElementById('incidentNote').value = '';
     document.getElementById('summaryNote').value = '';
@@ -661,3 +768,5 @@
 
 })();
 </script>
+</body>
+</html>
